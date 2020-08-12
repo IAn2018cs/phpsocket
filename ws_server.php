@@ -57,7 +57,7 @@ class WebSocketTest
         $this->server->on('close', function ($ser, $fd) {
             echo "client {$fd} closed\n";
             $this->offline($fd);
-            echo "当前连接数:" . sizeof($this->server->connections) - 1 . "\n";
+            echo "当前连接数:" . (sizeof($this->server->connections) - 1) . "\n";
         });
 
         $this->server->start();
