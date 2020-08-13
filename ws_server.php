@@ -1,5 +1,7 @@
 <?php
 
+$config = include __DIR__ . '/config.php';
+
 class WebSocketTest
 {
     var $conn;
@@ -19,74 +21,8 @@ class WebSocketTest
 
         $this->server->on('message', function (Swoole\WebSocket\Server $server, $frame) {
             echo "Message: {$frame->data}\n";
-            $fdInfo = $this->server->getClientInfo($frame->fd);
-
-            $time = intval($fdInfo["last_time"]) * 1000;
-            $ip = $fdInfo["remote_ip"] . ":" . strval($fdInfo["remote_port"]);
-
             $result = json_decode($frame->data, true);
-            $action = $result["action"];
-            if ($action == "init") {
-                $id = $result["userId"];
-                $key = $result["publicKey"];
-                $this->insertUserInfo($id, $key, $frame->fd);
-
-                // 返回给在线列表
-                $allOnline = $this->getAllOnline();
-                $allOnlineFD = $this->getAllOnlineFD();
-                foreach ($allOnlineFD as $fd) {
-                    // 需要先判断是否是正确的websocket连接，否则有可能会push失败
-                    if ($this->server->isEstablished($fd)) {
-                        $data = $this->getJsonData(array("action" => "list", "onlineList" => $allOnline));
-                        $server->push($fd, $data);
-                    }
-                }
-
-                // 检查消息表，是否有该用户未接受到的消息
-                $unSendMsg = $this->getUnSendMsg($id);
-                foreach ($unSendMsg as $msg) {
-                    $data = $this->getJsonData(array(
-                        "action" => "chart",
-                        "aesKey" => $msg["encrypt_key"],
-                        "msg" => $msg["encrypt_msg"],
-                        "time" => $msg["send_time"],
-                        "ip" => $msg["send_ip"],
-                        "msgId" => intval($msg["id"])
-                    ));
-                    $server->push($frame->fd, $data);
-                }
-            } else if ($action == "connect") {
-                $bId = $result["otherUserId"];
-                $key = $this->query($bId);
-                if (!empty($key)) {
-                    // 返回B的公钥
-                    $data = $this->getJsonData(array("action" => "connect", "publicKey" => $key));
-                    $server->push($frame->fd, $data);
-                }
-            } else if ($action == "chart") {
-                $bId = $result["otherUserId"];
-                $aesKey = $result["encryptKey"];
-                $emsg = $result["encryptMsg"];
-                $fd = $this->queryFD($bId);
-                // 先插入消息表中
-                $msgId = $this->saveMsg($bId, $aesKey, $emsg, $time, $ip);
-
-                if (!empty($fd) && $this->server->isEstablished($fd)) {
-                    // 将信息转发给B
-                    $data = $this->getJsonData(array(
-                        "action" => "chart",
-                        "aesKey" => $aesKey,
-                        "msg" => $emsg,
-                        "time" => $time,
-                        "ip" => $ip,
-                        "msgId" => intval($msgId)
-                    ));
-                    $server->push($fd, $data);
-                }
-            } else if ($action == "received") {
-                $msgId = $result["msgId"];
-                $this->deleteMsg($msgId);
-            }
+            $this->processMessage($result, $frame->fd);
         });
 
         $this->server->on('close', function ($ser, $fd) {
@@ -98,14 +34,96 @@ class WebSocketTest
         $this->server->start();
     }
 
+    protected function processMessage($result, $fd)
+    {
+        $fdInfo = $this->server->getClientInfo($fd);
+
+        $time = intval($fdInfo["last_time"]) * 1000;
+        $ip = $fdInfo["remote_ip"] . ":" . strval($fdInfo["remote_port"]);
+
+        $action = $result["action"];
+
+        switch ($action) {
+            case "init":
+                $id = $result["userId"];
+                $key = $result["publicKey"];
+                $this->insertUserInfo($id, $key, $fd);
+
+                // 返回给在线列表
+                $allOnline = $this->getAllOnline();
+                $allOnlineFD = $this->getAllOnlineFD();
+                foreach ($allOnlineFD as $otherFd) {
+                    $this->pushData($otherFd, array("action" => "list", "onlineList" => $allOnline));
+                }
+
+                // 检查消息表，是否有该用户未接受到的消息
+                // TODO 考虑 累计大量数据问题
+                $unSendMsg = $this->getUnSendMsg($id);
+                $this->pushData($fd, array(
+                    "action" => "history",
+                    "msgs" => $unSendMsg
+                ));
+                break;
+            case "connect":
+                $bId = $result["otherUserId"];
+                $key = $this->query($bId);
+                if (!empty($key)) {
+                    // 返回B的公钥
+                    $this->pushData($fd, array("action" => "connect", "publicKey" => $key));
+                }
+                break;
+            case "chart":
+                $bId = $result["otherUserId"];
+                $aesKey = $result["encryptKey"];
+                $emsg = $result["encryptMsg"];
+                $fromId = $result["fromId"];
+                $otherFd = $this->queryFD($bId);
+                // 先插入消息表中
+                $msgId = $this->saveMsg($bId, $fromId, $aesKey, $emsg, $time, $ip);
+
+                // 将信息转发给B
+                $this->pushData($otherFd, array(
+                    "action" => "chart",
+                    "aesKey" => $aesKey,
+                    "msg" => $emsg,
+                    "time" => $time,
+                    "ip" => $ip,
+                    "msgId" => intval($msgId),
+                    "fromId" => $fromId,
+                    "groupId" => -1
+                ));
+                break;
+            case "received":
+                $msgId = $result["msgId"];
+                $this->deleteMsg($msgId);
+                break;
+            case "historyReceived":
+                $msgIds = $result["msgIds"];
+                $this->deleteMsgs($msgIds);
+                break;
+        }
+    }
+
+    protected function pushData($fd, $data)
+    {
+        // 需要先判断是否是正确的websocket连接，否则有可能会push失败
+        if (!empty($fd) && $this->server->isEstablished($fd)) {
+            $data = $this->getJsonData($data);
+            $this->server->push($fd, $data);
+        }
+    }
+
     protected function connectDB()
     {
-        $servername = "localhost";
-        $username = "root";
-        $password = "chenshuaide";
-        $dbname = "e2ee";
+        global $config;
 
-        $this->conn = mysqli_connect($servername, $username, $password, $dbname, 3307);
+        $servername = $config['servername'];
+        $username = $config['username'];
+        $password = $config['password'];
+        $dbname = $config['dbname'];
+        $port = $config['port'];
+
+        $this->conn = mysqli_connect($servername, $username, $password, $dbname, $port);
         // 检测连接
         if (!$this->conn) {
             die("Connection failed: " . mysqli_connect_error() . "\n");
@@ -183,10 +201,24 @@ class WebSocketTest
         return $fds;
     }
 
-    protected function saveMsg($userId, $encryptKey, $encryptMsg, $time, $ip)
+    protected function saveMsg($userId, $fromId, $encryptKey, $encryptMsg, $time, $ip)
     {
-        $sql = "INSERT INTO `msg` (`user_id`, `encrypt_key`, `encrypt_msg`, `send_time`, `send_ip`) 
-                                VALUES ('$userId', '$encryptKey', '$encryptMsg', $time, '$ip')";
+        $sql = "INSERT INTO `msg` (`user_id`, `encrypt_key`, `encrypt_msg`, `send_time`, `send_ip`, `group_id`, `from_id`) 
+                                VALUES ('$userId', '$encryptKey', '$encryptMsg', $time, '$ip', -1, '$fromId')";
+        mysqli_query($this->conn, $sql);
+        return mysqli_insert_id($this->conn);
+    }
+
+    protected function saveGroupMsg($userInfos, $fromId, $encryptMsg, $time, $ip, $groupId)
+    {
+        $sql = "";
+        foreach ($userInfos as $userInfo) {
+            $sql .= "INSERT INTO `msg` (`user_id`, `encrypt_key`, `encrypt_msg`, `send_time`, `send_ip`, `group_id`, `from_id`) 
+                                VALUES ('{$userInfo["id"]}', '{$userInfo["key"]}', '$encryptMsg', $time, '$ip', $groupId, '$fromId')";
+        }
+        if (empty($sql)) {
+            return false;
+        }
         mysqli_query($this->conn, $sql);
         return mysqli_insert_id($this->conn);
     }
@@ -197,15 +229,29 @@ class WebSocketTest
         return mysqli_query($this->conn, $sql);
     }
 
+    protected function deleteMsgs($msgIds)
+    {
+        $sql = "DELETE FROM `msg` WHERE `id` IN ($msgIds);";
+        return mysqli_query($this->conn, $sql);
+    }
+
     protected function getUnSendMsg($userId)
     {
         $msgs = array();
-        $result = mysqli_query($this->conn, "SELECT `id`, `encrypt_key`, `encrypt_msg`, `send_time`, `send_ip` FROM `msg` WHERE `user_id`='$userId';");
+        $result = mysqli_query($this->conn, "SELECT `id`, `encrypt_key`, `encrypt_msg`, `send_time`, `send_ip`, `group_id`, `from_id` FROM `msg` WHERE `user_id`='$userId';");
         if (!$result) {
             return $msgs;
         }
         while ($row = mysqli_fetch_assoc($result)) {
-            array_push($msgs, $row);
+            array_push($msgs, array(
+                "aesKey" => $row["encrypt_key"],
+                "msg" => $row["encrypt_msg"],
+                "time" => $row["send_time"],
+                "ip" => $row["send_ip"],
+                "msgId" => intval($row["id"]),
+                "fromId" => $row["from_id"],
+                "groupId" => intval($row["group_id"])
+            ));
         }
         return $msgs;
     }

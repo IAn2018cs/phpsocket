@@ -1,3 +1,4 @@
 .idea/
 *.log
 *.sh
+conf/localconfig.json
