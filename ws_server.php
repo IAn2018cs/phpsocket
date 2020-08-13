@@ -24,8 +24,7 @@ class WebSocketTest
             $time = intval($fdInfo["last_time"]) * 1000;
             $ip = $fdInfo["remote_ip"] . ":" . strval($fdInfo["remote_port"]);
 
-            $result = json_decode($frame->data);
-            var_dump($result);
+            $result = json_decode($frame->data, true);
             $action = $result["action"];
             if ($action == "init") {
                 $id = $result["userId"];
