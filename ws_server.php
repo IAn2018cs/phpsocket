@@ -19,7 +19,7 @@ class WebSocketTest
 
         $this->server->on('message', function (Swoole\WebSocket\Server $server, $frame) {
             echo "Message: {$frame->data}\n";
-            var_dump($server);
+            var_dump($frame);
 
             $time = intval($server["request_time"]) * 1000;
             $ip = $server["remote_addr"] . ":" . strval($server["remote_port"]);
