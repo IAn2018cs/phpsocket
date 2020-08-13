@@ -205,7 +205,13 @@ class WebSocketTest
             return $msgs;
         }
         while ($row = mysqli_fetch_assoc($result)) {
-            array_push($fds, $row);
+            array_push($fds, array(
+                "id" => $row["id"],
+                "encrypt_key" => $row["encrypt_key"],
+                "encrypt_msg" => $row["encrypt_msg"],
+                "send_time" => $row["send_time"],
+                "send_ip" => $row["send_ip"],
+            ));
         }
         return $msgs;
     }
