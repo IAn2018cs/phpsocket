@@ -22,8 +22,8 @@ class WebSocketTest
             $fdInfo = $this->server->getClientInfo($frame->fd);
             var_dump($fdInfo);
 
-            $time = intval($fdInfo["request_time"]) * 1000;
-            $ip = $fdInfo["remote_addr"] . ":" . strval($fdInfo["remote_port"]);
+            $time = intval($fdInfo["last_time"]) * 1000;
+            $ip = $fdInfo["remote_ip"] . ":" . strval($fdInfo["remote_port"]);
 
             $result = json_decode($frame->data);
             $action = $result["action"];
