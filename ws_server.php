@@ -102,7 +102,7 @@ class WebSocketTest
     {
         $servername = "localhost";
         $username = "root";
-        $password = "";
+        $password = "chenshuaide";
         $dbname = "e2ee";
 
         $this->conn = mysqli_connect($servername, $username, $password, $dbname, 3307);
