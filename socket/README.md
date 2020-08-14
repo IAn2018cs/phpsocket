@@ -115,6 +115,7 @@ msgIds | 多条消息的id，用 `,` 分隔，如 `1,2,3,4`
 字段名 | 说明 
 --- | --- 
 [action](#客户端to服务端action含义)  | 需要为 6
+userId | 用户id
 groupId | 群id
 
 格式如下：
@@ -122,7 +123,43 @@ groupId | 群id
 ```
 {
     "action":6,
+    "userId":"XXXXXXXXXX",
     "groupId":1
+}
+```
+
+### 1.7 组聊天通信
+
+请求信息：
+
+字段名 | 说明 
+--- | --- 
+[action](#客户端to服务端action含义)  | 需要为 7
+fromId | 发送方用户id
+groupId | 群id
+encryptMsg | 加密后消息
+members | 成员加密后key集合
+userId | 成员用户id
+aesKey | 成员加密后AES key
+
+格式如下：
+
+```
+{
+    "action":7,
+    "fromId":"XXXXXXXXXX",
+    "groupId":1,
+    "encryptMsg":"XXXXXXXXXXXXXXXXXXXX",
+    "members":[
+        {
+            "userId":"XXXXXXXX",
+            "aesKey":"XXXXXXXXXXXXXXXX"
+        },
+        {
+            "userId":"XXXXXXXX",
+            "aesKey":"XXXXXXXXXXXXXXXX"
+        }
+    ]
 }
 ```
 
@@ -253,6 +290,36 @@ groupId | 组id，为 -1 则说明不是组内信息
 ```
 
 
+### 2.5 返回群内成员公钥信息
+
+返回信息：
+
+字段名 | 说明 
+--- | --- 
+[action](#服务端to客户端action含义)  |  5
+members | 成员信息集合
+userId | 成员用户id
+publicKey | 成员用户公钥
+
+格式如下：
+
+```
+{
+    "action":5,
+    "members":[
+        {
+            "userId":"XXXXXXXX",
+            "publicKey":"XXXXXXXXXXXXXXXX"
+        },
+        {
+            "userId":"XXXXXXXX",
+            "publicKey":"XXXXXXXXXXXXXXXX"
+        }
+    ]
+}
+```
+
+
 ## 客户端to服务端action含义
 
 action | 含义
@@ -274,3 +341,4 @@ action | 含义
 2 | 返回被连接者公钥
 3 | 聊天通信
 4 | 返回历史消息
+5 | 返回组内成员公钥信息

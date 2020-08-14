@@ -21,6 +21,8 @@ class JoinGroupApi extends BaseApi
         $groupName = $groupInfo[0]["name"];
         $ownerId = $groupInfo[0]["owner_id"];
 
+        // TODO 注意判断群员上限
+
         $sql = "INSERT INTO `group_member` (`group_id`, `user_id`, `type`) 
                                 VALUES ($groupId, '$userId', 2);";
 

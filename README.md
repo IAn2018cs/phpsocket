@@ -1,32 +1,5 @@
 # 家庭定位 服务端
 
-## 部署方式
-
-1.首先需要在项目目录新建一个叫 `conf` 的文件夹。
-
-2.在刚刚新建的conf文件夹下新建一个 `localconfig.json` 文件，内容格式如下：
-```
-{
-  "host": "数据库ip",
-  "account": "数据库账号",
-  "password": "数据库密码",
-  "database": "连接的数据库名字",
-  "port": 数据库端口号,
-  "isSecurity": 是否加密 true|false,
-  "securityKey": "加密key",
-  "projectId": [
-    "firebase项目id"
-  ]
-}
-``` 
-
-3.运行 `data/init.sql` ，初始化数据库表
-
-4.运行 `ws_server.php` 脚本，开启websocket监听。
-   
-
----
-
 ## 项目结构
 
 ```
@@ -54,13 +27,38 @@
 ├── data // 数据库初始化
 │   └── init.sql
 │
-├── conf 本地配置信息
+├── conf // 本地配置信息
 │   └── localconfig.json
 │
 └── README.md
-
 ```
 
+## 部署方式
+
+1.首先需要在项目目录新建一个叫 `conf` 的文件夹。
+
+2.在刚刚新建的conf文件夹下新建一个 `localconfig.json` 文件，内容格式如下：
+```
+{
+  "host": "数据库ip",
+  "account": "数据库账号",
+  "password": "数据库密码",
+  "database": "连接的数据库名字",
+  "port": 数据库端口号,
+  "isSecurity": 是否加密 true|false,
+  "securityKey": "加密key",
+  "projectId": [
+    "firebase项目id"
+  ]
+}
+``` 
+
+3.运行 `data/init.sql` ，初始化数据库表
+
+4.运行 `ws_server.php` 脚本，开启websocket监听。
+   
+
+---
 
 ## 数据库表结构
 

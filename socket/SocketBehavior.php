@@ -18,6 +18,7 @@ class SocketBehavior
     const ACTION_S2C_CHART_CONNECT = 2; // 返回被连接者公钥
     const ACTION_S2C_CHART = 3; // 聊天通信
     const ACTION_S2C_HISTORY_MSG = 4; // 返回历史消息
+    const ACTION_S2C_CONNECT_GROUP = 5; // 返回群内成员公钥
 
     public function __construct()
     {
@@ -70,7 +71,7 @@ class SocketBehavior
         }
     }
 
-    public function processChart(WebSocketServer $server, $otherId, $aesKey, $emsg, $fromId, $time, $ip)
+    public function processChart(WebSocketServer $server, $otherId, $aesKey, $emsg, $fromId, $time, $ip, $groupId = -1)
     {
         $otherFd = $this->queryFD($otherId);
         // 先插入消息表中
@@ -85,7 +86,7 @@ class SocketBehavior
             "ip" => $ip,
             "msgId" => intval($msgId),
             "fromId" => $fromId,
-            "groupId" => -1
+            "groupId" => $groupId
         ));
     }
 
@@ -104,15 +105,22 @@ class SocketBehavior
         $this->deleteMsgs($msgIds);
     }
 
-    public function processConnectGroup(WebSocketServer $server, $groupId)
+    public function processConnectGroup(WebSocketServer $server, $groupId, $userId, $fd)
     {
-
+        $groupMembers = $this->getGroupMembers($groupId, $userId);
+        $server->pushData($fd, array("action" => $this::ACTION_S2C_CONNECT_GROUP, "members" => $groupMembers));
     }
 
-    public function processChartGroup(WebSocketServer $server)
+    public function processChartGroup(WebSocketServer $server, $fromId, $groupId, $emsg, $members, $time, $ip)
     {
-
+        foreach ($members as $member) {
+            // 分别发送给成员
+            $userId = $member["userId"];
+            $aesKey = $member["aesKey"];
+            $this->processChart($server, $userId, $aesKey, $emsg, $fromId, $time, $ip, $groupId);
+        }
     }
+
 
     private function online($id, $key, $fd)
     {
@@ -238,5 +246,22 @@ class SocketBehavior
             ));
         }
         return $msgs;
+    }
+
+    private function getGroupMembers($groupId, $userId)
+    {
+        $members = array();
+        $result = mysqli_query($this->conn, "SELECT `id`, `publicKey` FROM `user_key` WHERE `id` IN 
+        (SELECT `user_id` FROM `group_member` WHERE `group_id` = $groupId AND `user_id` != '$userId');");
+        if (!$result) {
+            return $members;
+        }
+        while ($row = mysqli_fetch_assoc($result)) {
+            array_push($members, array(
+                "userId" => $row["id"],
+                "publicKey" => $row["publicKey"]
+            ));
+        }
+        return $members;
     }
 }

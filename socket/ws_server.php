@@ -74,13 +74,22 @@ class WebSocketServer
                 $this->behavior->processHistoryReceived($msgIds);
                 break;
             case SocketBehavior::ACTION_C2S_CONNECT_GROUP:
+                $id = $result["userId"];
                 $groupId = $result["groupId"];
-
-                $this->behavior->processConnectGroup($this, $groupId);
+                $this->behavior->processConnectGroup($this, $groupId, $id, $fd);
                 break;
             case SocketBehavior::ACTION_C2S_CHART_GROUP:
+                $fromId = $result["fromId"];
+                $groupId = $result["groupId"];
+                $emsg = $result["encryptMsg"];
+                $members = $result["members"];
 
-                $this->behavior->processChartGroup($this);
+                // 获取连接者信息
+                $fdInfo = $this->server->getClientInfo($fd);
+                $time = intval($fdInfo["last_time"]) * 1000;
+                $ip = $fdInfo["remote_ip"] . ":" . strval($fdInfo["remote_port"]);
+
+                $this->behavior->processChartGroup($this, $fromId, $groupId, $emsg, $members, $time, $ip);
                 break;
         }
     }
