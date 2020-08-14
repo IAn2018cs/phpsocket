@@ -14,11 +14,10 @@ class SocketBehavior
     const ACTION_C2S_CONNECT_GROUP = 6; // 请求连接组
     const ACTION_C2S_CHART_GROUP = 7; // 组聊天通信
 
-    const ACTION_S2C_ONLINE_LIST = 1; // 返回在线用户
-    const ACTION_S2C_CHART_CONNECT = 2; // 返回被连接者公钥
-    const ACTION_S2C_CHART = 3; // 聊天通信
-    const ACTION_S2C_HISTORY_MSG = 4; // 返回历史消息
-    const ACTION_S2C_CONNECT_GROUP = 5; // 返回群内成员公钥
+    const ACTION_S2C_CHART_CONNECT = 1; // 返回被连接者公钥
+    const ACTION_S2C_CHART = 2; // 聊天通信
+    const ACTION_S2C_HISTORY_MSG = 3; // 返回历史消息
+    const ACTION_S2C_CONNECT_GROUP = 4; // 返回群内成员公钥
 
     public function __construct()
     {
@@ -45,13 +44,6 @@ class SocketBehavior
     public function processInit(WebSocketServer $server, $id, $key, $fd)
     {
         $this->online($id, $key, $fd);
-
-        // 返回给在线列表
-        $allOnline = $this->getAllOnlineUserInfo();
-        $allOnlineFD = $this->getAllOnlineFD();
-        foreach ($allOnlineFD as $otherFd) {
-            $server->pushData($otherFd, array("action" => $this::ACTION_S2C_ONLINE_LIST, "onlineList" => $allOnline));
-        }
 
         // 检查消息表，是否有该用户未接受到的消息
         // TODO 考虑 累计大量数据问题
@@ -167,50 +159,10 @@ class SocketBehavior
         return null;
     }
 
-    private function getAllOnlineUserInfo()
-    {
-        $infos = array();
-        $result = mysqli_query($this->conn, "SELECT `id`, `publicKey` FROM `user_key` WHERE `online`=1;");
-        if (!$result) {
-            return $infos;
-        }
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($infos, array("userId" => $row["id"], "publicKey" => $row["publicKey"]));
-        }
-        return $infos;
-    }
-
-    private function getAllOnlineFD()
-    {
-        $fds = array();
-        $result = mysqli_query($this->conn, "SELECT `fd` FROM `user_key` WHERE `online`=1;");
-        if (!$result) {
-            return $fds;
-        }
-        while ($row = mysqli_fetch_assoc($result)) {
-            array_push($fds, $row["fd"]);
-        }
-        return $fds;
-    }
-
     private function saveMsg($userId, $fromId, $encryptKey, $encryptMsg, $time, $ip)
     {
         $sql = "INSERT INTO `msg` (`user_id`, `encrypt_key`, `encrypt_msg`, `send_time`, `send_ip`, `group_id`, `from_id`) 
                                 VALUES ('$userId', '$encryptKey', '$encryptMsg', $time, '$ip', -1, '$fromId')";
-        mysqli_query($this->conn, $sql);
-        return mysqli_insert_id($this->conn);
-    }
-
-    private function saveGroupMsg($userInfos, $fromId, $encryptMsg, $time, $ip, $groupId)
-    {
-        $sql = "";
-        foreach ($userInfos as $userInfo) {
-            $sql .= "INSERT INTO `msg` (`user_id`, `encrypt_key`, `encrypt_msg`, `send_time`, `send_ip`, `group_id`, `from_id`) 
-                                VALUES ('{$userInfo["id"]}', '{$userInfo["key"]}', '$encryptMsg', $time, '$ip', $groupId, '$fromId')";
-        }
-        if (empty($sql)) {
-            return false;
-        }
         mysqli_query($this->conn, $sql);
         return mysqli_insert_id($this->conn);
     }

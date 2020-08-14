@@ -6,6 +6,7 @@ require_once __DIR__ . '/../imp/JoinGroupApi.php';
 require_once __DIR__ . '/../imp/DeleteGroupApi.php';
 require_once __DIR__ . '/../imp/QueryGroupApi.php';
 require_once __DIR__ . '/../imp/LoginApi.php';
+require_once __DIR__ . '/../imp/QueryOnlineApi.php';
 
 class Dispatcher
 {
@@ -16,6 +17,7 @@ class Dispatcher
     const TYPE_DELETE_GROUP = 1003;  // 删除组
     const TYPE_QUERY_GROUP = 1004;  // 查询加入的组
     const TYPE_LOGIN = 1005;  // 登录
+    const TYPE_QUERY_ONLINE = 1006;  // 查询在线列表
 
     public function __construct($type)
     {
@@ -34,6 +36,9 @@ class Dispatcher
                 break;
             case self::TYPE_LOGIN:
                 $this->resultList = new LoginApi();
+                break;
+            case self::TYPE_QUERY_ONLINE:
+                $this->resultList = new QueryOnlineApi();
                 break;
         }
     }

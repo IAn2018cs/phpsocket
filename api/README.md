@@ -147,6 +147,29 @@ group  | 组id | 是
 ```
 
 
+## 六、查询在线用户
+
+> URL: http://localhost/online.php
+
+请求参数:
+
+无
+
+返回json格式如下：
+```
+{
+    "code":0,
+    "message":"success",
+    "data":[
+        {
+            "userId":"XXXXXX",
+            "publicKey":"XXXXXXXXXXX"
+        }
+    ]
+}
+```
+
+
 ---
 
 ## 状态码含义
