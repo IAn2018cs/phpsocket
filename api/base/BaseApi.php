@@ -2,7 +2,7 @@
 
 $config = include __DIR__ . '/../../base/config.php';
 require_once __DIR__ . '/Result.php';
-require_once __DIR__ . '../../base/SecurityApiController.php';
+require_once __DIR__ . '/../../base/SecurityApiController.php';
 
 abstract class BaseApi
 {
