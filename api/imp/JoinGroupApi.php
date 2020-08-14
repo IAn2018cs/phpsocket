@@ -25,7 +25,20 @@ class JoinGroupApi extends BaseApi
                                 VALUES ($groupId, '$userId', 2);";
 
         if ($this->insert($sql)) {
-            return $this->success(array("groupId" => $groupId, "groupName" => $groupName, "owner" => $ownerId));
+
+            $membersResult = $this->query("SELECT `user_id`, `type` FROM `group_member` WHERE `group_id` = $groupId;");
+            $members = array();
+            foreach ($membersResult as $item) {
+                array_push($members, array("userId" => $item["user_id"], "type" => $item["type"]));
+            }
+
+            return $this->success(array(
+                "groupId" => $groupId,
+                "groupName" => $groupName,
+                "owner" => $ownerId,
+                "shareCode" => $shareCode,
+                "members" => $members
+            ));
         }
 
         return $this->fail(5, "insert fail");
