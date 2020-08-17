@@ -78,10 +78,12 @@ shareCode | 群组分享码 | 是
         "members":[
             {
                 "userId":"chen",
+                "publicKey":"XXXXXXXXX",
                 "type":1
             },
             {
                 "userId":"haha",
+                "publicKey":"XXXXXXXXX",
                 "type":2
             }
         ]
@@ -114,10 +116,12 @@ userId  | 用户id | 是
             "members":[
                 {
                     "userId":"chen",
+                    "publicKey":"XXXXXXXXX",
                     "type":1
                 },
                 {
                     "userId":"haha",
+                    "publicKey":"XXXXXXXXX",
                     "type":2
                 }
             ]
