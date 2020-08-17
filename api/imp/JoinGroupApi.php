@@ -22,16 +22,15 @@ class JoinGroupApi extends BaseApi
         $ownerId = $groupInfo[0]["owner_id"];
 
         // TODO 注意判断群员上限
-
         $sql = "INSERT INTO `group_member` (`group_id`, `user_id`, `type`) 
                                 VALUES ($groupId, '$userId', 2);";
 
         if ($this->insert($sql)) {
-
-            $membersResult = $this->query("SELECT `user_id`, `type` FROM `group_member` WHERE `group_id` = $groupId;");
+            $membersResult = $this->query("SELECT `id`, `publicKey`, `type` FROM `user_key` LEFT JOIN `group_member` 
+                                                ON `user_key`.`id` = `group_member`.`user_id` WHERE `group_id` = $groupId;");
             $members = array();
             foreach ($membersResult as $item) {
-                array_push($members, array("userId" => $item["user_id"], "type" => $item["type"]));
+                array_push($members, array("userId" => $item["id"], "publicKey" => $item["publicKey"], "type" => $item["type"]));
             }
 
             return $this->success(array(

@@ -109,7 +109,9 @@ class SocketBehavior
             // 分别发送给成员
             $userId = $member["userId"];
             $aesKey = $member["aesKey"];
-            $this->processChart($server, $userId, $aesKey, $emsg, $fromId, $time, $ip, $groupId);
+            if ($fromId != $userId) {
+                $this->processChart($server, $userId, $aesKey, $emsg, $fromId, $time, $ip, $groupId);
+            }
         }
     }
 
