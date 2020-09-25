@@ -67,7 +67,7 @@ class SocketBehavior
     {
         $otherFd = $this->queryFD($otherId);
         // 先插入消息表中
-        $msgId = $this->saveMsg($otherId, $fromId, $aesKey, $emsg, $time, $ip);
+        $msgId = $this->saveMsg($otherId, $fromId, $aesKey, $emsg, $time, $ip, $groupId);
 
         // 将信息转发给B
         $server->pushData($otherFd, array(
@@ -161,10 +161,10 @@ class SocketBehavior
         return null;
     }
 
-    private function saveMsg($userId, $fromId, $encryptKey, $encryptMsg, $time, $ip)
+    private function saveMsg($userId, $fromId, $encryptKey, $encryptMsg, $time, $ip, $groupId = -1)
     {
         $sql = "INSERT INTO `msg` (`user_id`, `encrypt_key`, `encrypt_msg`, `send_time`, `send_ip`, `group_id`, `from_id`) 
-                                VALUES ('$userId', '$encryptKey', '$encryptMsg', $time, '$ip', -1, '$fromId')";
+                                VALUES ('$userId', '$encryptKey', '$encryptMsg', $time, '$ip', $groupId, '$fromId')";
         mysqli_query($this->conn, $sql);
         return mysqli_insert_id($this->conn);
     }
